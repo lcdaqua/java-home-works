@@ -12,11 +12,7 @@ public abstract class PaymentAbstract <T extends Payment> implements PaymentServ
 
     @Override
     public int getTotalSum() {
-        int sum = 0;
-        for (int i = 0; i < getPaymentsCount(); i++) {
-            sum += function.apply(supplier.get()[i]);
-        }
-        return sum;
+        return Arrays.stream(supplier.get()).mapToInt(payment -> function.apply(payment)).sum();
     }
 
     @Override
