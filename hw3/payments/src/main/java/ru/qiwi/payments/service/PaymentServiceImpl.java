@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
-public class PaymentServiceImpl implements PaymentService {
+public class PaymentServiceImpl {
 
     private PaymentsDataProvider paymentsDataProvider;
 
