@@ -1,14 +1,14 @@
 package ru.qiwi.payments.service;
 
 import org.springframework.stereotype.Service;
+import ru.qiwi.payments.comparators.PaymentDataComparator;
 import ru.qiwi.payments.dataprovider.PaymentsDataProvider;
 import ru.qiwi.payments.dto.Payment;
 import ru.qiwi.payments.dto.TotalSum;
-import ru.qiwi.payments.dto.TotalSumComparator;
+import ru.qiwi.payments.comparators.TotalSumComparator;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -26,13 +26,16 @@ public class PaymentServiceImpl {
     // должен вернуть объект TotalSum, который содержит сумму всех списаний
     // и сумму всех пополнений для пользователя с personId
     public TotalSum getTotalSum(String personId) {
-        return new TotalSum(
-                paymentsDataProvider
-                        .getPayments()
-                        .stream()
-                        .filter(x -> x.getFromAccount().equals(personId))
-                        .collect(Collectors.toList())
-        );
+        TotalSum totalSum = new TotalSum();
+        paymentsDataProvider.getPayments()
+                .stream()
+                .filter(x -> x.getToAccount().equals(personId) & x.getFromAccount().equals(personId))
+                .collect(Collectors.toList())
+                .forEach(payment -> {
+                    totalSum.setTotalAmount(totalSum.getTotalAmount() + payment.getAmount());
+                    totalSum.setTotalCommission(totalSum.getTotalCommission() + payment.getCommission());
+                });
+        return totalSum;
     }
 
     // должен вернуть количество платежей, совершенных пользователем
@@ -76,14 +79,18 @@ public class PaymentServiceImpl {
             LocalDateTime dateTill,
             Payment.MerchantType merchantType
     ) {
-        return new TotalSum(
-                paymentsDataProvider
-                        .getPayments()
-                        .stream()
-                        .filter(x -> x.getMerchantType().equals(merchantType))
-                        .filter(x -> x.getDate().isAfter(dateFrom) & x.getDate().isBefore(dateTill))
-                        .collect(Collectors.toList()))
-                .getTotalCommission();
+        TotalSum totalSum = new TotalSum();
+        paymentsDataProvider
+                .getPayments()
+                .stream()
+                .filter(x -> x.getMerchantType().equals(merchantType))
+                .filter(x -> x.getDate().isAfter(dateFrom) & x.getDate().isBefore(dateTill))
+                .collect(Collectors.toList())
+                .forEach(payment -> {
+                    totalSum.setTotalAmount(totalSum.getTotalAmount() + payment.getAmount());
+                    totalSum.setTotalCommission(totalSum.getTotalCommission() + payment.getCommission());
+                });
+        return totalSum.getTotalCommission();
     }
 
     // Оборот за период по мерчанту
@@ -92,23 +99,27 @@ public class PaymentServiceImpl {
             LocalDateTime dateTill,
             Payment.MerchantType merchantType
     ) {
-        return new TotalSum(
-                paymentsDataProvider
-                        .getPayments()
-                        .stream()
-                        .filter(x -> x.getMerchantType().equals(merchantType))
-                        .filter(x -> x.getDate().isAfter(dateFrom) & x.getDate().isBefore(dateTill))
-                        .collect(Collectors.toList()))
-                .getNR();
+        TotalSum totalSum = new TotalSum();
+        paymentsDataProvider
+                .getPayments()
+                .stream()
+                .filter(x -> x.getMerchantType().equals(merchantType))
+                .filter(x -> x.getDate().isAfter(dateFrom) & x.getDate().isBefore(dateTill))
+                .collect(Collectors.toList())
+                .forEach(payment -> {
+                    totalSum.setTotalAmount(totalSum.getTotalAmount() + payment.getAmount());
+                    totalSum.setTotalCommission(totalSum.getTotalCommission() + payment.getCommission());
+                });
+        return totalSum.getNR();
     }
 
-    // топ 10 пользователей по обороту(списания + пополнения) за период, сортированый список
-    public List <String> getTopUsers(
+    // топ 10 пользователей по обороту(списания) за период, сортированый список
+    public List<String> getTopUsers(
             LocalDateTime dateFrom,
             LocalDateTime dateTill
     ) {
+        final List <TotalSum> totalSums = new ArrayList<>();
         Set <String> users = new HashSet<>();
-        List <TotalSum> totalSums = new ArrayList<>();
         List <String> topUsers = new ArrayList<>();
 
         paymentsDataProvider
@@ -121,28 +132,20 @@ public class PaymentServiceImpl {
                 });
 
         for (String user: users) {
-            totalSums.add(new TotalSum(paymentsDataProvider.getPayments().stream()
+            paymentsDataProvider.getPayments().stream()
                     .filter(x -> x.getDate().isAfter(dateFrom) & x.getDate().isBefore(dateTill))
                     .filter(x -> x.getFromAccount().equals(user) & x.getToAccount().equals(user))
-                    .collect(Collectors.toList()), user));
+                    .collect(Collectors.toList())
+                    .forEach(payment -> {
+                        totalSums.add(new TotalSum(payment.getAmount(), payment.getCommission(), user));
+                        totalSums.sort(new TotalSumComparator());
+                    });
         }
-
-        totalSums = totalSums.stream().sorted(new TotalSumComparator()).collect(Collectors.toList());
-
-
 
         for (int i = 0; i < 10; i++) {
             topUsers.add(totalSums.get(i).getPersonId());
         }
 
         return topUsers;
-    }
-}
-
-class PaymentDataComparator implements Comparator <Payment> {
-
-    @Override
-    public int compare(Payment firstPayment, Payment secondPayment) {
-        return firstPayment.getDate().compareTo(secondPayment.getDate());
     }
 }

@@ -1,4 +1,6 @@
-package ru.qiwi.payments.dto;
+package ru.qiwi.payments.comparators;
+
+import ru.qiwi.payments.dto.TotalSum;
 
 import java.util.Comparator;
 

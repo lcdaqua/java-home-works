@@ -8,15 +8,17 @@ public class TotalSum {
     private double totalCommission;
     private String personId;
 
-
-    public TotalSum(List<Payment> payments) {
-        payments.forEach(payment -> totalAmount += payment.getAmount());
-        payments.forEach(payment -> totalCommission += payment.getCommission());
+    public TotalSum() {
     }
 
-    public TotalSum(List<Payment> payments, String personId) {
-        payments.forEach(payment -> totalAmount += payment.getAmount());
-        payments.forEach(payment -> totalCommission += payment.getCommission());
+    public TotalSum(double totalAmount, double totalCommission) {
+        this.totalCommission = totalCommission;
+        this.totalAmount = totalAmount;
+    }
+
+    public TotalSum(double totalAmount, double totalCommission, String personId) {
+        this.totalCommission = totalCommission;
+        this.totalAmount = totalAmount;
         this.personId = personId;
     }
 
